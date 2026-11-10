@@ -1,5 +1,5 @@
 // Recite Mark offline worker. VERSION changes on every build so phones pick up the new app.
-const VERSION = 'rm-1b576447ac';
+const VERSION = 'rm-bd5d75c48e';
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -27,6 +27,8 @@ self.addEventListener('fetch', e => {
 });
 // Phone notifications from the team relay (relaypatch2). The push has no text: the app saved who this phone is.
 self.addEventListener('push', e => {
+  // an app that is already open checks the relay right away (relaypatch4)
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => ws.forEach(w => { try { w.postMessage({ rl: 'check' }); } catch (x) {} })).catch(() => {}));
   e.waitUntil(caches.open('rm-push').then(c => c.match(self.registration.scope + '__push-role')).then(r => r ? r.json() : {}).catch(() => ({})).then(o =>
     // a quizzer's phone peeks at its own box (only the code kind letter is readable) to tell a plan from a nudge
     (o.quiz && o.url && o.qbox ? fetch(o.url + '/m/' + o.qbox, { cache: 'no-store' }).then(r => r.json()).then(j => (j.items || []).map(x => String(x.body).slice(5, 6))).catch(() => []) : Promise.resolve([])).then(kinds => {
@@ -39,6 +41,6 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
     for (const w of ws) if ('focus' in w) { try { w.postMessage({ rl: 'check' }); } catch (x) {} return w.focus(); }
-    return clients.openWindow('./');
+    return clients.openWindow('./?rl=1');
   }));
 });
