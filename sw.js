@@ -1,5 +1,5 @@
 // Recite Mark offline worker. VERSION changes on every build so phones pick up the new app.
-const VERSION = 'rm-b58201cbb2';
+const VERSION = 'rm-3d96784109';
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
