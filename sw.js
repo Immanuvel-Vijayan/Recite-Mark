@@ -1,5 +1,5 @@
 // Recite Mark offline worker. VERSION changes on every build so phones pick up the new app.
-const VERSION = 'rm-342551824e';
+const VERSION = 'rm-efc739a524';
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -19,7 +19,7 @@ self.addEventListener('fetch', e => {
   if (u.origin !== location.origin) return;
   if (r.mode === 'navigate') {
     // Online: newest app. Offline: the saved copy.
-    e.respondWith(fetch(r).then(res => { const cp = res.clone(); caches.open(VERSION).then(c => c.put('index.html', cp)); return res; })
+    e.respondWith(fetch(r, { cache: 'no-store' }).then(res => { const cp = res.clone(); caches.open(VERSION).then(c => c.put('index.html', cp)); return res; })
       .catch(() => caches.match('index.html')));
     return;
   }
