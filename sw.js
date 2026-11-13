@@ -1,5 +1,5 @@
 // Recite Mark offline worker. VERSION changes on every build so phones pick up the new app.
-const VERSION = 'rm-5a77119fcc';
+const VERSION = 'rm-b1fad7ca1b';
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -18,9 +18,17 @@ self.addEventListener('fetch', e => {
   }
   if (u.origin !== location.origin) return;
   if (r.mode === 'navigate') {
-    // Online: newest app. Offline: the saved copy.
-    e.respondWith(fetch(r, { cache: 'no-store' }).then(res => { const cp = res.clone(); caches.open(VERSION).then(c => c.put('index.html', cp)); return res; })
-      .catch(() => caches.match('index.html')));
+    // Online: newest app. Offline: the saved copy. Weak signal: after 4 s open the saved copy instead of waiting
+    // (the newer copy still downloads and is used next time). resumepatch, 2026-11-13.
+    const net = fetch(r, { cache: 'no-store' }).then(res => { if (res.ok) { const cp = res.clone(); e.waitUntil(caches.open(VERSION).then(c => c.put('index.html', cp))); } return res; });
+    e.waitUntil(net.catch(() => {}));
+    e.respondWith(new Promise(done => {
+      let sent = false; const send = x => { if (!sent && x) { sent = true; done(x); } };
+      const saved = () => caches.match('index.html');
+      const t = setTimeout(() => saved().then(send), 4000);
+      net.then(res => { clearTimeout(t); if (res.ok) send(res); else saved().then(c => send(c || res)); },
+        () => { clearTimeout(t); saved().then(c => send(c || Response.error())); });
+    }));
     return;
   }
   e.respondWith(caches.match(r).then(hit => hit || fetch(r)));
